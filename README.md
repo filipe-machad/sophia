@@ -35,3 +35,7 @@ cd ../.. && npm run build
 ```
 
 O primeiro acesso cria uma conta real. O modo de demonstração usa apenas dados fictícios. Informações clínicas não fazem parte do esquema atual.
+
+## Estudo
+
+- [Guia completo do backend](docs/backend-study-guide.md): do entry point Node.js às transações e consultas no PostgreSQL.
