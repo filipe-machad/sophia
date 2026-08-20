@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { serverApi } from "../_lib/server-api";
-import DashboardClient, { type DashboardAppointment, type User } from "./dashboard-client";
+import DashboardClient, { type DashboardAppointment, type DashboardClientRecord, type User } from "./dashboard-client";
 
 type DashboardPageProps = { searchParams: Promise<{ demo?: string }> };
 const demoUser: User = { professionalName: "Artemis", email: "demo@sophia.local" };
@@ -23,7 +23,7 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
   const nowIso = new Date().toISOString();
 
   if (demo) {
-    return <DashboardClient appointments={[]} demo expectedSessions={12} month={month} nowIso={nowIso} user={demoUser} />;
+    return <DashboardClient appointments={[]} clients={[]} demo expectedSessions={12} month={month} nowIso={nowIso} user={demoUser} />;
   }
 
   const [userResponse, appointmentsResponse, clientsResponse] = await Promise.all([
@@ -37,12 +37,13 @@ export default async function DashboardPage({ searchParams }: DashboardPageProps
 
   const { user } = await userResponse.json() as { user: User };
   const { appointments } = await appointmentsResponse.json() as { appointments: DashboardAppointment[] };
-  const clientsBody = await clientsResponse.json() as { clients: Array<{ sessionsPerMonth: number }> };
+  const clientsBody = await clientsResponse.json() as { clients: DashboardClientRecord[] };
   const expectedSessions = clientsBody.clients.reduce((total, client) => total + client.sessionsPerMonth, 0);
 
   return (
     <DashboardClient
       appointments={appointments}
+      clients={clientsBody.clients}
       demo={false}
       expectedSessions={expectedSessions}
       month={month}

@@ -2,35 +2,33 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { ArrowRight, CalendarRange, Check, ChevronLeft, ChevronRight, CircleCheckBig, HandCoins, LogOut, MoreHorizontal, Plus, UserRoundX } from "lucide-react";
 import { AppSidebar } from "../_components/app-sidebar";
+import { CreateAppointmentDrawer, type AppointmentClient, type CreatedAppointment } from "../_components/create-appointment-drawer";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
 const TIME_ZONE = "America/Sao_Paulo";
 
 export type User = { professionalName: string; email: string };
-export type DashboardAppointment = {
-  id: string;
-  clientId: string;
-  clientName: string;
-  startsAt: string;
-  durationMinutes: number;
-  mode: "online" | "in_person";
-  status: "scheduled" | "completed" | "cancelled" | "no_show";
-  absenceJustified: boolean | null;
-  paymentStatus: "pending" | "paid" | "waived";
-  amount: string;
-  paidAt: string | null;
-};
+export type DashboardAppointment = CreatedAppointment;
+export type DashboardClientRecord = AppointmentClient & { sessionsPerMonth: number };
 
 type DashboardClientProps = {
   appointments: DashboardAppointment[];
+  clients: DashboardClientRecord[];
   demo: boolean;
   expectedSessions: number;
   month: string;
   nowIso: string;
   user: User;
 };
+
+const demoClients: DashboardClientRecord[] = [
+  { id: "demo-1", name: "Ana Martins", sessionPrice: "180.00", sessionsPerMonth: 4 },
+  { id: "demo-2", name: "Luísa Barros", sessionPrice: "200.00", sessionsPerMonth: 4 },
+  { id: "demo-3", name: "Rafael Costa", sessionPrice: "160.00", sessionsPerMonth: 4 },
+];
 
 function demoAppointments(month: string): DashboardAppointment[] {
   return [
@@ -45,9 +43,11 @@ function shiftMonth(month: string, offset: number) {
   return String(date.getUTCFullYear()).padStart(4, "0") + "-" + String(date.getUTCMonth() + 1).padStart(2, "0");
 }
 
-export default function DashboardClient({ appointments, demo, expectedSessions, month, nowIso, user }: DashboardClientProps) {
+export default function DashboardClient({ appointments, clients, demo, expectedSessions, month, nowIso, user }: DashboardClientProps) {
   const router = useRouter();
-  const records = demo ? demoAppointments(month) : appointments;
+  const availableClients = demo ? demoClients : clients;
+  const [records, setRecords] = useState<DashboardAppointment[]>(() => demo ? demoAppointments(month) : appointments);
+  const [createOpen, setCreateOpen] = useState(false);
   const agendaHref = "/agenda?month=" + month + (demo ? "&demo=1" : "");
   const previousMonthHref = "/agenda?month=" + shiftMonth(month, -1) + (demo ? "&demo=1" : "");
   const nextMonthHref = "/agenda?month=" + shiftMonth(month, 1) + (demo ? "&demo=1" : "");
@@ -71,8 +71,9 @@ export default function DashboardClient({ appointments, demo, expectedSessions, 
   const justified = absences.filter(item => item.absenceJustified).length;
   const pending = records.filter(item => item.paymentStatus === "pending");
   const pendingValue = pending.reduce((total, item) => total + Number(item.amount), 0);
-  const remaining = Math.max(expectedSessions - records.length, 0);
-  const progress = expectedSessions > 0 ? Math.min((records.length / expectedSessions) * 100, 100) : 0;
+  const plannedRecords = records.filter(item => item.status !== "cancelled");
+  const remaining = Math.max(expectedSessions - plannedRecords.length, 0);
+  const progress = expectedSessions > 0 ? Math.min((plannedRecords.length / expectedSessions) * 100, 100) : 0;
   const attendanceBase = completed + absences.length;
   const attendance = attendanceBase > 0 ? (completed / attendanceBase) * 100 : 0;
   const upcoming = records.filter(item => item.status === "scheduled").slice(0, 3);
@@ -93,16 +94,16 @@ export default function DashboardClient({ appointments, demo, expectedSessions, 
       <section className="content" id="inicio">
         <header>
           <div><p className="eyebrow">{dateLabel}</p><h1>{greeting + ", " + user.professionalName.split(" ")[0] + "."}</h1><p>Aqui está o ritmo do consultório hoje.</p></div>
-          <Link className="primary" href={agendaHref} style={{display:"flex",alignItems:"center",gap:7,textDecoration:"none"}}><Plus size={17}/> Nova sessão</Link>
+          <button className="primary" disabled={availableClients.length === 0} onClick={() => setCreateOpen(true)} style={{display:"flex",alignItems:"center",gap:7}} title={availableClients.length === 0 ? "Cadastre um cliente antes de criar uma sessão" : undefined} type="button"><Plus size={17}/> Nova sessão</button>
         </header>
 
         <section className="metrics" aria-label="Resumo do mês">
           <article className="metric feature">
-            <span className="metricLabel" style={{display:"flex",alignItems:"center",gap:8}}><CalendarRange size={15} strokeWidth={1.8}/> {"SESSÕES EM " + monthLabelUpper}</span>
-            <div><strong>{records.length}</strong><em>{Math.round(progress)}%</em></div>
-            <p>{"de " + expectedSessions + " sessões previstas"}</p>
+            <span className="metricLabel" style={{display:"flex",alignItems:"center",gap:8}}><CalendarRange size={15} strokeWidth={1.8}/> {"PLANEJAMENTO · " + monthLabelUpper}</span>
+            <div><strong>{plannedRecords.length}</strong><em>{Math.round(progress)}%</em></div>
+            <p>{expectedSessions + (expectedSessions === 1 ? " encontro recorrente esperado" : " encontros recorrentes esperados")}</p>
             <span className="progress"><i style={{width:progress + "%"}}/></span>
-            <small>{remaining + (remaining === 1 ? " sessão restante" : " sessões restantes")}</small>
+            <small>{remaining === 0 ? "Planejamento mensal coberto" : remaining + (remaining === 1 ? " ainda sem agendamento" : " ainda sem agendamento")}</small>
           </article>
 
           <article className="metric">
@@ -152,6 +153,14 @@ export default function DashboardClient({ appointments, demo, expectedSessions, 
           </aside>
         </section>
       </section>
+
+      {createOpen ? <CreateAppointmentDrawer
+        clients={availableClients}
+        demo={demo}
+        month={month}
+        onClose={() => setCreateOpen(false)}
+        onCreated={appointment => setRecords(current => [...current, appointment].sort((a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime()))}
+      /> : null}
     </main>
   );
 }
