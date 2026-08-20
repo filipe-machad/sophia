@@ -75,6 +75,44 @@ function formatCurrency(value: string) {
   return Number(value).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 }
 
+function defaultDateForMonth(selectedMonth: string) {
+  const parts = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: TIME_ZONE,
+  }).formatToParts(new Date()).map(part => [part.type, part.value]));
+  const day = parts.year + "-" + parts.month === selectedMonth ? parts.day : "01";
+
+  return day + "/" + selectedMonth.slice(5, 7) + "/" + selectedMonth.slice(0, 4);
+}
+
+function maskBrazilianDate(value: string) {
+  const digits = value.replace(/\D/g, "").slice(0, 8);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 4) return digits.slice(0, 2) + "/" + digits.slice(2);
+  return digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
+}
+
+function parseBrazilianDate(value: string) {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
+  if (!match) return null;
+
+  const [, dayPart, monthPart, yearPart] = match;
+  if (!dayPart || !monthPart || !yearPart) return null;
+
+  const day = Number(dayPart);
+  const month = Number(monthPart);
+  const year = Number(yearPart);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
+    return null;
+  }
+
+  return yearPart + "-" + monthPart + "-" + dayPart;
+}
+
 export default function AgendaClient({ demo, initialAppointments, initialClients, initialError = null, month }: AgendaClientProps) {
   const router = useRouter();
   const clients = demo ? demoClients : initialClients;
@@ -128,7 +166,8 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
     setMessage(null);
     const data = new FormData(event.currentTarget);
     const clientId = String(data.get("clientId"));
-    const date = String(data.get("date"));
+    const dateInput = String(data.get("date"));
+    const date = parseBrazilianDate(dateInput);
     const time = String(data.get("time"));
     const durationMinutes = Number(data.get("duration"));
     const mode = String(data.get("mode")) as Appointment["mode"];
@@ -136,6 +175,12 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
 
     if (!client) {
       setMessage("Selecione um cliente ativo.");
+      setSaving(false);
+      return;
+    }
+
+    if (!date) {
+      setMessage("Informe uma data válida no formato DD/MM/YYYY.");
       setSaving(false);
       return;
     }
@@ -336,7 +381,7 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
           <p className={styles.helper}>O valor atual do cliente será registrado nesta sessão e não mudará depois.</p>
           <form onSubmit={createAppointment}>
             <label>Cliente<select ref={firstFieldRef} name="clientId" required defaultValue=""><option disabled value="">Selecione um cliente</option>{clients.map(client => <option key={client.id} value={client.id}>{client.name} · {formatCurrency(client.sessionPrice)}</option>)}</select></label>
-            <div className={styles.formGrid}><label>Data<input defaultValue={month + "-01"} min={month + "-01"} name="date" required type="date"/></label><label>Horário<input defaultValue="09:00" name="time" required type="time"/></label></div>
+            <div className={styles.formGrid}><label>Data<input autoComplete="off" defaultValue={defaultDateForMonth(month)} inputMode="numeric" maxLength={10} name="date" onInput={event => { event.currentTarget.value = maskBrazilianDate(event.currentTarget.value); }} pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" placeholder="DD/MM/YYYY" required type="text"/></label><label>Horário<input defaultValue="09:00" name="time" required type="time"/></label></div>
             <div className={styles.formGrid}><label>Modalidade<select defaultValue="online" name="mode"><option value="online">Online</option><option value="in_person">Presencial</option></select></label><label>Duração<select defaultValue="50" name="duration"><option value="30">30 minutos</option><option value="50">50 minutos</option><option value="60">60 minutos</option><option value="90">90 minutos</option></select></label></div>
             <div className={styles.formActions}><button onClick={() => setCreateOpen(false)} type="button">Cancelar</button><button disabled={saving} type="submit">{saving ? "Criando…" : "Criar sessão"}</button></div>
           </form>

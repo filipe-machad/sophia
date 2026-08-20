@@ -44,8 +44,8 @@
 .notice{color:#6a756f;background:#e9efeb}
 .overlay{position:fixed;z-index:50;inset:0;display:flex;justify-content:flex-end;background:#1d2c2570;backdrop-filter:blur(2px)}
 .backdrop{position:absolute;inset:0;border:0;background:transparent;cursor:default}
-.drawer,.statusDialog{position:relative;z-index:1;background:#fff;box-shadow:-15px 0 40px #15251e1f}
-.drawer{width:min(480px,100%);height:100%;padding:31px 34px;animation:enter .25s ease}
+.drawer,.statusDialog{position:relative;z-index:1;max-width:100%;overflow-x:hidden;background:#fff;box-shadow:-15px 0 40px #15251e1f}
+.drawer{width:min(480px,100%);height:100%;overflow-y:auto;padding:31px 34px;animation:enter .25s ease}
 .statusDialog{width:min(440px,calc(100% - 40px));align-self:center;margin:auto;padding:29px;border-radius:18px;box-shadow:0 24px 70px #14221c38}
 .drawerHead{display:flex;align-items:flex-start;justify-content:space-between}
 .drawerHead h2{margin:0;font-family:var(--font-display,Arial),Arial,sans-serif;font-size:24px;letter-spacing:-.8px}
@@ -53,9 +53,10 @@
 .helper{margin:12px 0 27px;padding:12px;border-radius:10px;color:#668073;background:#edf4ef;font-size:11px;line-height:1.5}
 .drawer form,.statusDialog form{display:grid;gap:17px}
 .drawer label,.statusDialog label{display:grid;gap:7px;color:#4c5953;font-size:12px;font-weight:800}
-.drawer input,.drawer select,.statusDialog select{height:44px;padding:0 12px;border:1px solid #dfe5e0;border-radius:10px;outline:0;background:#fff;color:#34413a;font-size:13px}
+.drawer input,.drawer select,.statusDialog select{width:100%;min-width:0;height:44px;padding:0 12px;border:1px solid #dfe5e0;border-radius:10px;outline:0;background:#fff;color:#34413a;font-size:13px}
 .drawer input:focus,.drawer select:focus,.statusDialog select:focus{border-color:#729485;box-shadow:0 0 0 3px #e4eee8}
-.formGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.formGrid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.formGrid>*{min-width:0}
 .formActions{display:flex;justify-content:flex-end;gap:9px;margin-top:13px;padding-top:19px;border-top:1px solid #e8ece9}
 .formActions button{height:41px;padding:0 16px;border:1px solid #dde3de;border-radius:10px;background:#fff;color:#66726c;cursor:pointer;font-size:12px;font-weight:800}
 .formActions button:last-child{border-color:#315d4e;background:#315d4e;color:#fff}
