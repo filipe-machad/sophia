@@ -25,6 +25,7 @@ const clientSchema = z.object({
 });
 const updateClientSchema = clientSchema.partial().refine((value) => Object.keys(value).length > 0);
 const clientParamsSchema = z.object({ id: z.string().uuid() });
+const clientListQuerySchema = z.object({ status: z.enum(["active", "archived", "all"]).default("active") });
 
 function parsedBody<T>(schema: z.ZodType<T>, body: unknown) {
   const result = schema.safeParse(body);
@@ -90,8 +91,14 @@ export function buildApp() {
     return { user };
   });
 
-  app.get("/clients", { preHandler: requireAuth }, async (request) => {
-    const rows = await db.select().from(clients).where(and(eq(clients.ownerId, request.authUser.id), eq(clients.active, true))).orderBy(asc(clients.name));
+  app.get("/clients", { preHandler: requireAuth }, async (request, reply) => {
+    const query = clientListQuerySchema.safeParse(request.query);
+    if (!query.success) return reply.code(400).send({ error: "invalid_query" });
+    const ownerFilter = eq(clients.ownerId, request.authUser.id);
+    const visibilityFilter = query.data.status === "all"
+      ? ownerFilter
+      : and(ownerFilter, eq(clients.active, query.data.status === "active"));
+    const rows = await db.select().from(clients).where(visibilityFilter).orderBy(asc(clients.name));
     return { clients: rows };
   });
 
@@ -113,6 +120,14 @@ export function buildApp() {
     if (input.sessionPrice !== undefined) updates.sessionPrice = Number(input.sessionPrice).toFixed(2);
     if (input.sessionsPerMonth !== undefined) updates.sessionsPerMonth = input.sessionsPerMonth;
     const [client] = await db.update(clients).set(updates).where(and(eq(clients.id, params.data.id), eq(clients.ownerId, request.authUser.id), eq(clients.active, true))).returning();
+    if (!client) return reply.code(404).send({ error: "client_not_found" });
+    return { client };
+  });
+
+  app.post("/clients/:id/restore", { preHandler: requireAuth }, async (request, reply) => {
+    const params = clientParamsSchema.safeParse(request.params);
+    if (!params.success) return reply.code(400).send({ error: "invalid_input" });
+    const [client] = await db.update(clients).set({ active: true, updatedAt: new Date() }).where(and(eq(clients.id, params.data.id), eq(clients.ownerId, request.authUser.id), eq(clients.active, false))).returning();
     if (!client) return reply.code(404).send({ error: "client_not_found" });
     return { client };
   });

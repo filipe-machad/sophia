@@ -6,9 +6,10 @@
 - Cadastro, login, logout e sessões revogáveis.
 - Separação dos dados por conta profissional.
 - Dashboard e modo de demonstração.
+- Navegação compartilhada e transições sem reload documental.
 - Modelo inicial de clientes, sessões e pagamentos por sessão.
 
-## Gestão de clientes — em andamento
+## Gestão de clientes — concluída
 
 - Listagem e estado vazio.
 - Cadastro, edição e arquivamento.

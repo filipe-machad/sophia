@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CalendarDays, CalendarRange, Check, ChevronLeft, ChevronRight, CircleCheckBig, HandCoins, House, LogOut, MoreHorizontal, Plus, TrendingUp, UserRoundX, UsersRound, WalletCards } from "lucide-react";
+import { ArrowRight, CalendarRange, Check, ChevronLeft, ChevronRight, CircleCheckBig, HandCoins, LogOut, MoreHorizontal, Plus, TrendingUp, UserRoundX } from "lucide-react";
+import { AppSidebar } from "../_components/app-sidebar";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3333";
 const sessions = [
@@ -10,7 +10,6 @@ const sessions = [
   { time: "11:30", initials: "RC", name: "Rafael Costa", detail: "Presencial · 50 min", status: "A confirmar" },
   { time: "15:00", initials: "LB", name: "Luísa Barros", detail: "Online · 50 min", status: "Confirmada" },
 ];
-const iconProps = { size: 18, strokeWidth: 1.8 };
 export type User = { professionalName: string; email: string };
 
 type DashboardClientProps = { demo: boolean; user: User };
@@ -28,16 +27,11 @@ export default function DashboardClient({ demo, user }: DashboardClientProps) {
 
   return (
     <main className="shell">
-      <aside className="sidebar">
-        <div className="brand"><span>S</span> Sophia</div>
-        <nav aria-label="Navegação principal">
-          <a className="active" href="#inicio"><House {...iconProps} /><span>Visão geral</span></a>
-          <a href="#agenda"><CalendarDays {...iconProps} /><span>Agenda</span></a>
-          <Link href={demo ? "/clients?demo=1" : "/clients"}><UsersRound {...iconProps} /><span>Clientes</span></Link>
-          <a href="#financeiro"><WalletCards {...iconProps} /><span>Financeiro</span></a>
-        </nav>
-        <div className="profile"><i>{initials}</i><span><b>{label}</b><small>{demo ? "Dados fictícios" : user.email}</small></span>{!demo ? <button aria-label="Sair" onClick={logout} style={{marginLeft:"auto",border:0,background:"none",color:"#7d8983",cursor:"pointer"}} type="button"><LogOut size={16}/></button> : null}</div>
-      </aside>
+      <AppSidebar
+        active="overview"
+        demo={demo}
+        footer={<div className="profile"><i>{initials}</i><span><b>{label}</b><small>{demo ? "Dados fictícios" : user.email}</small></span>{!demo ? <button aria-label="Sair" onClick={logout} style={{marginLeft:"auto",border:0,background:"none",color:"#7d8983",cursor:"pointer"}} type="button"><LogOut size={16}/></button> : null}</div>}
+      />
 
       <section className="content" id="inicio">
         <header><div><p className="eyebrow">QUARTA-FEIRA, 19 DE AGOSTO</p><h1>{`Bom dia, ${user.professionalName.split(" ")[0]}.`}</h1><p>Aqui está o ritmo do consultório hoje.</p></div><button className="primary" style={{display:"flex",alignItems:"center",gap:7}} type="button"><Plus size={17} /> Nova sessão</button></header>

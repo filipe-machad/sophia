@@ -9,7 +9,8 @@
     "start": "node dist/server.js",
     "test": "vitest run",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "test:isolation": "node scripts/isolation-smoke.mjs"
   },
   "dependencies": {
     "@fastify/cookie": "^11.1.2",

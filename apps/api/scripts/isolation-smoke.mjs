@@ -41,4 +41,19 @@ assert.deepEqual((await otherList.json()).clients, []);
 const ownerArchive = await fetch(`${api}/clients/${client.id}`, { method: "DELETE", headers: { origin, cookie: ownerCookie } });
 assert.equal(ownerArchive.status, 204);
 
+const ownerArchivedList = await fetch(`${api}/clients?status=archived`, { headers: { cookie: ownerCookie } });
+assert.equal(ownerArchivedList.status, 200);
+assert.deepEqual((await ownerArchivedList.json()).clients.map(item => item.id), [client.id]);
+
+const otherArchivedList = await fetch(`${api}/clients?status=archived`, { headers: { cookie: otherCookie } });
+assert.equal(otherArchivedList.status, 200);
+assert.deepEqual((await otherArchivedList.json()).clients, []);
+
+const forbiddenRestore = await fetch(`${api}/clients/${client.id}/restore`, { method: "POST", headers: { origin, cookie: otherCookie } });
+assert.equal(forbiddenRestore.status, 404);
+
+const ownerRestore = await fetch(`${api}/clients/${client.id}/restore`, { method: "POST", headers: { origin, cookie: ownerCookie } });
+assert.equal(ownerRestore.status, 200);
+assert.equal((await ownerRestore.json()).client.active, true);
+
 console.log("isolation-smoke=passed");

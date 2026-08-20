@@ -29,6 +29,7 @@ npm run dev
 
 ```bash
 cd apps/api && npm test && npm run build
+cd apps/api && npm run test:isolation # requer API e banco locais ativos
 cd ../.. && npm run build
 ```
 
