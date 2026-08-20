@@ -56,4 +56,66 @@ const ownerRestore = await fetch(`${api}/clients/${client.id}/restore`, { method
 assert.equal(ownerRestore.status, 200);
 assert.equal((await ownerRestore.json()).client.active, true);
 
+const monthParts = new Intl.DateTimeFormat("en", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit" }).formatToParts(new Date());
+const testYear = monthParts.find(part => part.type === "year")?.value;
+const testMonthNumber = monthParts.find(part => part.type === "month")?.value;
+assert.ok(testYear && testMonthNumber);
+const testMonth = testYear + "-" + testMonthNumber;
+const startsAt = testMonth + "-15T10:00:00-03:00";
+
+const createdAppointment = await fetch(api + "/appointments", {
+  method: "POST",
+  headers: { "content-type": "application/json", origin, cookie: ownerCookie },
+  body: JSON.stringify({ clientId: client.id, startsAt, durationMinutes: 50, mode: "online" }),
+});
+assert.equal(createdAppointment.status, 201);
+const { appointment } = await createdAppointment.json();
+assert.equal(appointment.amount, "190.00");
+
+const changedPrice = await fetch(api + "/clients/" + client.id, {
+  method: "PATCH",
+  headers: { "content-type": "application/json", origin, cookie: ownerCookie },
+  body: JSON.stringify({ sessionPrice: 250 }),
+});
+assert.equal(changedPrice.status, 200);
+
+const ownerAppointments = await fetch(api + "/appointments?month=" + testMonth, { headers: { cookie: ownerCookie } });
+assert.equal(ownerAppointments.status, 200);
+const ownerAppointmentRows = (await ownerAppointments.json()).appointments;
+assert.deepEqual(ownerAppointmentRows.map(item => item.id), [appointment.id]);
+assert.equal(ownerAppointmentRows[0].amount, "190.00");
+
+const otherAppointments = await fetch(api + "/appointments?month=" + testMonth, { headers: { cookie: otherCookie } });
+assert.equal(otherAppointments.status, 200);
+assert.deepEqual((await otherAppointments.json()).appointments, []);
+
+const forbiddenPayment = await fetch(api + "/appointments/" + appointment.id + "/payment", {
+  method: "PATCH",
+  headers: { "content-type": "application/json", origin, cookie: otherCookie },
+  body: JSON.stringify({ status: "paid" }),
+});
+assert.equal(forbiddenPayment.status, 404);
+
+const paid = await fetch(api + "/appointments/" + appointment.id + "/payment", {
+  method: "PATCH",
+  headers: { "content-type": "application/json", origin, cookie: ownerCookie },
+  body: JSON.stringify({ status: "paid" }),
+});
+assert.equal(paid.status, 200);
+assert.equal((await paid.json()).payment.status, "paid");
+
+const invalidNoShow = await fetch(api + "/appointments/" + appointment.id + "/status", {
+  method: "PATCH",
+  headers: { "content-type": "application/json", origin, cookie: ownerCookie },
+  body: JSON.stringify({ status: "no_show" }),
+});
+assert.equal(invalidNoShow.status, 400);
+
+const waivePaid = await fetch(api + "/appointments/" + appointment.id + "/status", {
+  method: "PATCH",
+  headers: { "content-type": "application/json", origin, cookie: ownerCookie },
+  body: JSON.stringify({ status: "no_show", absenceJustified: true, charge: false }),
+});
+assert.equal(waivePaid.status, 409);
+
 console.log("isolation-smoke=passed");

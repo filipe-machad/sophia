@@ -9,6 +9,7 @@ import { env } from "./config.js";
 import { db } from "./db/client.js";
 import { authSessions, clients, users } from "./db/schema.js";
 import { getAuthUser, issueSession, requireAuth } from "./auth.js";
+import { appointmentRoutes } from "./appointments.js";
 import { hashPassword, hashSessionToken, normalizeEmail, SESSION_COOKIE, verifyPassword } from "./security.js";
 
 const credentialsSchema = z.object({
@@ -90,6 +91,8 @@ export function buildApp() {
     if (!user) return reply.code(401).send({ error: "authentication_required" });
     return { user };
   });
+
+  app.register(appointmentRoutes);
 
   app.get("/clients", { preHandler: requireAuth }, async (request, reply) => {
     const query = clientListQuerySchema.safeParse(request.query);

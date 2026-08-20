@@ -16,7 +16,8 @@
 - Busca e filtros básicos.
 - Preferência de frequência mensal e valor por sessão.
 
-## Sessões e pagamentos — próximo
+## Sessões e pagamentos — em andamento
+n- API mensal de sessões, valor congelado por encontro e pagamento individual — concluída.
 
 - Agenda mensal e criação de sessão.
 - Estados: agendada, realizada, cancelada e falta do cliente.
