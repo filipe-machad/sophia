@@ -1,6 +1,6 @@
 # Sophia
 
-Aplicação para organização administrativa de consultórios de psicologia: clientes, sessões, faltas e pagamentos por sessão.
+Aplicação para organização administrativa de consultórios de psicologia: clientes, agenda mensal, faltas, reagendamentos e controle financeiro por sessão.
 
 ## Estrutura
 
@@ -8,6 +8,7 @@ Aplicação para organização administrativa de consultórios de psicologia: cl
 - API: Node.js + Fastify em `apps/api/`, executada em `http://localhost:3333`.
 - Banco: PostgreSQL 17 em Docker, exposto localmente na porta `5433`.
 - Persistência: Drizzle ORM com migrações versionadas em `apps/api/drizzle/`.
+- Áreas atuais: dashboard, clientes, agenda editável e financeiro mensal.
 
 ## Desenvolvimento local
 

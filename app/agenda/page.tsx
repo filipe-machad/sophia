@@ -26,7 +26,7 @@ export default async function AgendaPage({ searchParams }: AgendaPageProps) {
 
   const [appointmentsResponse, clientsResponse] = await Promise.all([
     serverApi("/appointments?month=" + month),
-    serverApi("/clients"),
+    serverApi("/clients?status=all"),
   ]);
 
   if (appointmentsResponse.status === 401 || clientsResponse.status === 401) redirect("/");

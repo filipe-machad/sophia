@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, Laptop, MapPin, Plus, Settings2, UserRoundX, X } from "lucide-react";
+import { CalendarDays, Check, ChevronLeft, ChevronRight, CircleDollarSign, Clock3, Laptop, MapPin, PencilLine, Plus, Settings2, UserRoundX, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { AppSidebar } from "../_components/app-sidebar";
 import styles from "./agenda.module.css";
@@ -30,6 +30,7 @@ export type AgendaClientRecord = {
   id: string;
   name: string;
   sessionPrice: string;
+  active: boolean;
 };
 
 type AgendaClientProps = {
@@ -54,9 +55,9 @@ const paymentLabels: Record<PaymentStatus, string> = {
 };
 
 const demoClients: AgendaClientRecord[] = [
-  { id: "demo-1", name: "Ana Martins", sessionPrice: "180.00" },
-  { id: "demo-2", name: "Luísa Barros", sessionPrice: "200.00" },
-  { id: "demo-3", name: "Rafael Costa", sessionPrice: "160.00" },
+  { id: "demo-1", name: "Ana Martins", sessionPrice: "180.00", active: true },
+  { id: "demo-2", name: "Luísa Barros", sessionPrice: "200.00", active: true },
+  { id: "demo-3", name: "Rafael Costa", sessionPrice: "160.00", active: true },
 ];
 
 function demoAppointments(month: string): Appointment[] {
@@ -94,6 +95,35 @@ function maskBrazilianDate(value: string) {
   return digits.slice(0, 2) + "/" + digits.slice(2, 4) + "/" + digits.slice(4);
 }
 
+function formatBrazilianDate(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: TIME_ZONE,
+  }).format(new Date(value));
+}
+
+function formatTimeInput(value: string) {
+  return new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    hourCycle: "h23",
+    minute: "2-digit",
+    timeZone: TIME_ZONE,
+  }).format(new Date(value));
+}
+
+function monthInSaoPaulo(value: string) {
+  const parts = new Intl.DateTimeFormat("en", {
+    month: "2-digit",
+    timeZone: TIME_ZONE,
+    year: "numeric",
+  }).formatToParts(new Date(value));
+  const year = parts.find(part => part.type === "year")?.value;
+  const monthNumber = parts.find(part => part.type === "month")?.value;
+  return year && monthNumber ? year + "-" + monthNumber : "";
+}
+
 function parseBrazilianDate(value: string) {
   const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(value);
   if (!match) return null;
@@ -116,8 +146,10 @@ function parseBrazilianDate(value: string) {
 export default function AgendaClient({ demo, initialAppointments, initialClients, initialError = null, month }: AgendaClientProps) {
   const router = useRouter();
   const clients = demo ? demoClients : initialClients;
+  const activeClients = clients.filter(client => client.active);
   const [appointments, setAppointments] = useState<Appointment[]>(demo ? demoAppointments(month) : initialAppointments);
   const [createOpen, setCreateOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<Appointment | null>(null);
   const [statusTarget, setStatusTarget] = useState<Appointment | null>(null);
   const [nextStatus, setNextStatus] = useState<AppointmentStatus>("scheduled");
   const [absenceJustified, setAbsenceJustified] = useState(false);
@@ -127,10 +159,11 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
   const firstFieldRef = useRef<HTMLSelectElement>(null);
 
   useEffect(() => {
-    if (!createOpen && !statusTarget) return;
+    if (!createOpen && !editTarget && !statusTarget) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setCreateOpen(false);
+      setEditTarget(null);
       setStatusTarget(null);
     };
     document.addEventListener("keydown", handleKeyDown);
@@ -139,7 +172,7 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
       document.removeEventListener("keydown", handleKeyDown);
       if (frame) cancelAnimationFrame(frame);
     };
-  }, [createOpen, statusTarget]);
+  }, [createOpen, editTarget, statusTarget]);
 
   const monthLabel = useMemo(() => new Intl.DateTimeFormat("pt-BR", {
     month: "long",
@@ -171,7 +204,7 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
     const time = String(data.get("time"));
     const durationMinutes = Number(data.get("duration"));
     const mode = String(data.get("mode")) as Appointment["mode"];
-    const client = clients.find(item => item.id === clientId);
+    const client = activeClients.find(item => item.id === clientId);
 
     if (!client) {
       setMessage("Selecione um cliente ativo.");
@@ -187,7 +220,7 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
 
     if (demo) {
       const appointment: Appointment = {
-        id: "demo-session-" + Date.now(),
+        id: "demo-session-" + String(appointments.length + 1),
         clientId,
         clientName: client.name,
         startsAt: new Date(date + "T" + time + ":00-03:00").toISOString(),
@@ -223,6 +256,74 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
       setCreateOpen(false);
     } catch {
       setMessage("Não foi possível criar a sessão.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function updateAppointment(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!editTarget) return;
+
+    setSaving(true);
+    setMessage(null);
+    const data = new FormData(event.currentTarget);
+    const clientId = String(data.get("clientId"));
+    const date = parseBrazilianDate(String(data.get("date")));
+    const time = String(data.get("time"));
+    const durationMinutes = Number(data.get("duration"));
+    const mode = String(data.get("mode")) as Appointment["mode"];
+    const client = clients.find(item => item.id === clientId);
+
+    if (!client || (!client.active && client.id !== editTarget.clientId)) {
+      setMessage("Selecione um cliente ativo.");
+      setSaving(false);
+      return;
+    }
+    if (!date) {
+      setMessage("Informe uma data válida no formato DD/MM/YYYY.");
+      setSaving(false);
+      return;
+    }
+
+    const startsAt = new Date(date + "T" + time + ":00-03:00").toISOString();
+    const moveOutsideCurrentMonth = monthInSaoPaulo(startsAt) !== month;
+    const localUpdate: Appointment = {
+      ...editTarget,
+      clientId,
+      clientName: client.name,
+      startsAt,
+      durationMinutes,
+      mode,
+    };
+
+    if (demo) {
+      setAppointments(current => moveOutsideCurrentMonth
+        ? current.filter(item => item.id !== editTarget.id)
+        : sortAppointments(current.map(item => item.id === editTarget.id ? localUpdate : item)));
+      setEditTarget(null);
+      setMessage(moveOutsideCurrentMonth ? "Sessão reagendada para outro mês." : null);
+      setSaving(false);
+      return;
+    }
+
+    try {
+      const response = await fetch(API_URL + "/appointments/" + editTarget.id, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ clientId, startsAt, durationMinutes, mode }),
+      });
+      if (!response.ok) throw new Error();
+      const body = await response.json() as { appointment: Appointment };
+      setAppointments(current => moveOutsideCurrentMonth
+        ? current.filter(item => item.id !== editTarget.id)
+        : sortAppointments(current.map(item => item.id === editTarget.id ? body.appointment : item)));
+      setEditTarget(null);
+      setMessage(moveOutsideCurrentMonth ? "Sessão reagendada para outro mês." : null);
+      router.refresh();
+    } catch {
+      setMessage("Não foi possível salvar as alterações da sessão.");
     } finally {
       setSaving(false);
     }
@@ -329,7 +430,7 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
       <section className={styles.content}>
         <header className={styles.header}>
           <div><p>ROTINA DO CONSULTÓRIO</p><h1>Agenda</h1><span>Organize encontros, presenças e cobranças por sessão.</span></div>
-          <button disabled={clients.length === 0} onClick={() => setCreateOpen(true)} type="button"><Plus size={17}/> Nova sessão</button>
+          <button disabled={activeClients.length === 0} onClick={() => setCreateOpen(true)} type="button"><Plus size={17}/> Nova sessão</button>
         </header>
 
         <div className={styles.monthBar}>
@@ -346,10 +447,10 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
         </section>
 
         {message ? <p className={styles.message} role="alert">{message}</p> : null}
-        {clients.length === 0 ? <p className={styles.notice}>Cadastre um cliente ativo antes de criar a primeira sessão.</p> : null}
+        {activeClients.length === 0 ? <p className={styles.notice}>Cadastre um cliente ativo antes de criar a primeira sessão.</p> : null}
 
         {appointments.length === 0 ? (
-          <div className={styles.empty}><span><CalendarDays size={26}/></span><h2>Nenhuma sessão neste mês</h2><p>Crie um encontro para começar a acompanhar presença e pagamento.</p>{clients.length > 0 ? <button onClick={() => setCreateOpen(true)} type="button"><Plus size={16}/> Criar primeira sessão</button> : null}</div>
+          <div className={styles.empty}><span><CalendarDays size={26}/></span><h2>Nenhuma sessão neste mês</h2><p>Crie um encontro para começar a acompanhar presença e pagamento.</p>{activeClients.length > 0 ? <button onClick={() => setCreateOpen(true)} type="button"><Plus size={16}/> Criar primeira sessão</button> : null}</div>
         ) : (
           <section className={styles.list} aria-label="Sessões do mês">
             {appointments.map(appointment => {
@@ -361,7 +462,10 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
                   <span className={styles.mode}>{appointment.mode === "online" ? <Laptop size={14}/> : <MapPin size={14}/>} {appointment.mode === "online" ? "Online" : "Presencial"}</span>
                 </div>
                 <div className={styles.state}>
-                  <button onClick={() => openStatus(appointment)} type="button"><Settings2 size={14}/>{statusLabels[appointment.status]}</button>
+                  <div className={styles.sessionActions}>
+                    <button onClick={() => openStatus(appointment)} type="button"><Settings2 size={14}/>{statusLabels[appointment.status]}</button>
+                    <button aria-label={"Editar sessão de " + appointment.clientName} onClick={() => setEditTarget(appointment)} title="Editar sessão" type="button"><PencilLine size={14}/></button>
+                  </div>
                   {appointment.status === "no_show" ? <small>{appointment.absenceJustified ? "Justificada" : "Não justificada"}</small> : null}
                 </div>
                 <div className={styles.payment}>
@@ -380,10 +484,24 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
           <div className={styles.drawerHead}><div><p>NOVO ENCONTRO</p><h2 id="new-session-title">Criar sessão</h2></div><button aria-label="Fechar" onClick={() => setCreateOpen(false)} type="button"><X size={19}/></button></div>
           <p className={styles.helper}>O valor atual do cliente será registrado nesta sessão e não mudará depois.</p>
           <form onSubmit={createAppointment}>
-            <label>Cliente<select ref={firstFieldRef} name="clientId" required defaultValue=""><option disabled value="">Selecione um cliente</option>{clients.map(client => <option key={client.id} value={client.id}>{client.name} · {formatCurrency(client.sessionPrice)}</option>)}</select></label>
+            <label>Cliente<select ref={firstFieldRef} name="clientId" required defaultValue=""><option disabled value="">Selecione um cliente</option>{activeClients.map(client => <option key={client.id} value={client.id}>{client.name} · {formatCurrency(client.sessionPrice)}</option>)}</select></label>
             <div className={styles.formGrid}><label>Data<input autoComplete="off" defaultValue={defaultDateForMonth(month)} inputMode="numeric" maxLength={10} name="date" onInput={event => { event.currentTarget.value = maskBrazilianDate(event.currentTarget.value); }} pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" placeholder="DD/MM/YYYY" required type="text"/></label><label>Horário<input defaultValue="09:00" name="time" required type="time"/></label></div>
             <div className={styles.formGrid}><label>Modalidade<select defaultValue="online" name="mode"><option value="online">Online</option><option value="in_person">Presencial</option></select></label><label>Duração<select defaultValue="50" name="duration"><option value="30">30 minutos</option><option value="50">50 minutos</option><option value="60">60 minutos</option><option value="90">90 minutos</option></select></label></div>
             <div className={styles.formActions}><button onClick={() => setCreateOpen(false)} type="button">Cancelar</button><button disabled={saving} type="submit">{saving ? "Criando…" : "Criar sessão"}</button></div>
+          </form>
+        </section>
+      </div> : null}
+
+      {editTarget ? <div className={styles.overlay}>
+        <button aria-label="Fechar edição de sessão" className={styles.backdrop} onClick={() => setEditTarget(null)} type="button"/>
+        <section aria-labelledby="edit-session-title" aria-modal="true" className={styles.drawer} role="dialog">
+          <div className={styles.drawerHead}><div><p>AJUSTAR ENCONTRO</p><h2 id="edit-session-title">Editar sessão</h2></div><button aria-label="Fechar" onClick={() => setEditTarget(null)} type="button"><X size={19}/></button></div>
+          <p className={styles.helper}>O valor registrado na criação será preservado, mesmo se o cliente for alterado.</p>
+          <form onSubmit={updateAppointment}>
+            <label>Cliente<select defaultValue={editTarget.clientId} name="clientId" required>{clients.filter(client => client.active || client.id === editTarget.clientId).map(client => <option key={client.id} value={client.id}>{client.name}{client.active ? "" : " · arquivado"}</option>)}</select></label>
+            <div className={styles.formGrid}><label>Data<input autoComplete="off" defaultValue={formatBrazilianDate(editTarget.startsAt)} inputMode="numeric" maxLength={10} name="date" onInput={event => { event.currentTarget.value = maskBrazilianDate(event.currentTarget.value); }} pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}" placeholder="DD/MM/YYYY" required type="text"/></label><label>Horário<input defaultValue={formatTimeInput(editTarget.startsAt)} name="time" required type="time"/></label></div>
+            <div className={styles.formGrid}><label>Modalidade<select defaultValue={editTarget.mode} name="mode"><option value="online">Online</option><option value="in_person">Presencial</option></select></label><label>Duração<select defaultValue={String(editTarget.durationMinutes)} name="duration"><option value="30">30 minutos</option><option value="50">50 minutos</option><option value="60">60 minutos</option><option value="90">90 minutos</option></select></label></div>
+            <div className={styles.formActions}><button onClick={() => setEditTarget(null)} type="button">Cancelar</button><button disabled={saving} type="submit">{saving ? "Salvando…" : "Salvar alterações"}</button></div>
           </form>
         </section>
       </div> : null}

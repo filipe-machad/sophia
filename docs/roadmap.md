@@ -7,23 +7,37 @@
 - Separação dos dados por conta profissional.
 - Dashboard e modo de demonstração.
 - Navegação compartilhada e transições sem reload documental.
-- Modelo inicial de clientes, sessões e pagamentos por sessão.
+- Modelo administrativo de clientes, sessões e pagamentos por sessão.
+- Teste real de isolamento entre contas para clientes, sessões e pagamentos.
 
 ## Gestão de clientes — concluída
 
 - Listagem e estado vazio.
-- Cadastro, edição e arquivamento.
+- Cadastro, edição, arquivamento e restauração.
 - Busca e filtros básicos.
 - Preferência de frequência mensal e valor por sessão.
 
-## Sessões e pagamentos — concluída
-- API mensal de sessões, valor congelado por encontro e pagamento individual — concluída.
+## Agenda e sessões — concluída
 
 - Agenda mensal e criação de sessão.
+- Edição e reagendamento de cliente, data, horário, modalidade e duração.
+- Preservação do valor registrado originalmente ao editar uma sessão.
 - Estados: agendada, realizada, cancelada e falta do cliente.
 - Falta justificada e definição de cobrança.
-- Pagamento individual por sessão: pendente ou pago.
 - Resumo mensal derivado dos registros reais.
+
+## Financeiro — concluído
+
+- Pagamento individual por sessão: pendente, pago ou não cobrado.
+- Página financeira mensal com valores cobrados, recebidos, pendentes e não cobrados.
+- Filtros por estado do pagamento.
+- Atualização do pagamento diretamente pela agenda ou pelo financeiro.
+
+## Qualidade — próxima etapa
+
+- Transformar os testes de integração em uma suíte independente do servidor local já iniciado.
+- Adicionar testes do frontend e do fluxo completo de cadastro, cliente, sessão e pagamento.
+- Cobrir acessibilidade, teclado e diferentes larguras de tela de forma automatizada.
 
 ## Segurança pré-produção — prioridade obrigatória
 
@@ -34,7 +48,8 @@
 - Segundo fator de autenticação.
 - Gestão de segredos, HTTPS, backups e teste de restauração.
 - Auditoria de eventos administrativos sem conteúdo sensível.
-- Testes automatizados de autorização entre contas.
+- Termos de uso e política de privacidade reais, com registro da versão aceita.
+- Exportação dos dados e encerramento de conta.
 
 ## Área clínica — nice to have, isolada
 

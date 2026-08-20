@@ -15,6 +15,7 @@ export function AppSidebar({ active, demo, footer }: AppSidebarProps) {
   const dashboardHref = demo ? "/dashboard?demo=1" : "/dashboard";
   const clientsHref = demo ? "/clients?demo=1" : "/clients";
   const agendaHref = demo ? "/agenda?demo=1" : "/agenda";
+  const financeHref = demo ? "/finance?demo=1" : "/finance";
 
   return (
     <aside className={styles.sidebar}>
@@ -31,7 +32,7 @@ export function AppSidebar({ active, demo, footer }: AppSidebarProps) {
         <Link className={active === "clients" ? styles.active : undefined} href={clientsHref}>
           <UsersRound {...iconProps} /><span>Clientes</span>
         </Link>
-        <Link className={active === "finance" ? styles.active : undefined} href={`${dashboardHref}#financeiro`}>
+        <Link className={active === "finance" ? styles.active : undefined} href={financeHref}>
           <WalletCards {...iconProps} /><span>Financeiro</span>
         </Link>
       </nav>

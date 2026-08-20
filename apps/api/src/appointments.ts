@@ -10,6 +10,7 @@ import {
   monthBoundsInSaoPaulo,
   paymentStatusAfterCharge,
   paymentStatuses,
+  updateAppointmentSchema,
   updateAppointmentStatusSchema,
   updatePaymentSchema,
 } from "./appointments-domain.js";
@@ -105,6 +106,76 @@ export async function appointmentRoutes(app: FastifyInstance) {
 
     if (!result) return reply.code(404).send({ error: "client_not_found" });
     return reply.code(201).send({ appointment: result });
+  });
+
+  app.patch("/appointments/:id", { preHandler: requireAuth }, async (request, reply) => {
+    const params = appointmentParamsSchema.safeParse(request.params);
+    const input = updateAppointmentSchema.safeParse(request.body);
+    if (!params.success || !input.success) return reply.code(400).send({ error: "invalid_input" });
+
+    const result = await db.transaction(async (transaction) => {
+      const [record] = await transaction
+        .select({ id: appointments.id, clientId: appointments.clientId })
+        .from(appointments)
+        .where(and(
+          eq(appointments.id, params.data.id),
+          eq(appointments.ownerId, request.authUser.id),
+        ))
+        .limit(1);
+      if (!record) return { error: "appointment_not_found" } as const;
+
+      const targetClientId = input.data.clientId ?? record.clientId;
+      const [targetClient] = await transaction
+        .select({ id: clients.id, name: clients.name, active: clients.active })
+        .from(clients)
+        .where(and(
+          eq(clients.id, targetClientId),
+          eq(clients.ownerId, request.authUser.id),
+        ))
+        .limit(1);
+      if (!targetClient || (targetClient.id !== record.clientId && !targetClient.active)) {
+        return { error: "client_not_found" } as const;
+      }
+
+      const updates: Partial<typeof appointments.$inferInsert> = { updatedAt: new Date() };
+      if (input.data.clientId !== undefined) updates.clientId = input.data.clientId;
+      if (input.data.startsAt !== undefined) updates.startsAt = input.data.startsAt;
+      if (input.data.durationMinutes !== undefined) updates.durationMinutes = input.data.durationMinutes;
+      if (input.data.mode !== undefined) updates.mode = input.data.mode;
+
+      const [appointment] = await transaction
+        .update(appointments)
+        .set(updates)
+        .where(and(
+          eq(appointments.id, record.id),
+          eq(appointments.ownerId, request.authUser.id),
+        ))
+        .returning();
+      if (!appointment) throw new Error("Appointment update failed");
+
+      const [payment] = await transaction
+        .select({ status: payments.status, amount: payments.amount, paidAt: payments.paidAt })
+        .from(payments)
+        .where(and(
+          eq(payments.appointmentId, appointment.id),
+          eq(payments.ownerId, request.authUser.id),
+        ))
+        .limit(1);
+      if (!payment) throw new Error("Appointment payment not found");
+
+      return {
+        appointment: {
+          ...appointment,
+          clientName: targetClient.name,
+          paymentStatus: payment.status,
+          amount: payment.amount,
+          paidAt: payment.paidAt,
+        },
+      } as const;
+    });
+
+    if ("error" in result) return reply.code(404).send({ error: result.error });
+    return result;
   });
 
   app.patch("/appointments/:id/status", { preHandler: requireAuth }, async (request, reply) => {

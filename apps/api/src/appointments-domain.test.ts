@@ -3,6 +3,7 @@ import {
   currentMonthInSaoPaulo,
   monthBoundsInSaoPaulo,
   paymentStatusAfterCharge,
+  updateAppointmentSchema,
   updateAppointmentStatusSchema,
 } from "./appointments-domain.js";
 
@@ -23,6 +24,13 @@ describe("appointment domain", () => {
 
   it("calculates the current month in São Paulo", () => {
     expect(currentMonthInSaoPaulo(new Date("2026-09-01T02:30:00.000Z"))).toBe("2026-08");
+  });
+
+  it("validates partial appointment updates", () => {
+    expect(updateAppointmentSchema.safeParse({}).success).toBe(false);
+    expect(updateAppointmentSchema.safeParse({ durationMinutes: 60 }).success).toBe(true);
+    expect(updateAppointmentSchema.safeParse({ durationMinutes: 5 }).success).toBe(false);
+    expect(updateAppointmentSchema.safeParse({ mode: "telephone" }).success).toBe(false);
   });
 
   it("requires justification information for a no-show", () => {

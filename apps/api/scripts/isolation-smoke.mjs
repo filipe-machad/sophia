@@ -79,6 +79,24 @@ const changedPrice = await fetch(api + "/clients/" + client.id, {
 });
 assert.equal(changedPrice.status, 200);
 
+const forbiddenAppointmentUpdate = await fetch(api + "/appointments/" + appointment.id, {
+  method: "PATCH",
+  headers: { "content-type": "application/json", origin, cookie: otherCookie },
+  body: JSON.stringify({ durationMinutes: 60 }),
+});
+assert.equal(forbiddenAppointmentUpdate.status, 404);
+
+const editedAppointment = await fetch(api + "/appointments/" + appointment.id, {
+  method: "PATCH",
+  headers: { "content-type": "application/json", origin, cookie: ownerCookie },
+  body: JSON.stringify({ durationMinutes: 60, mode: "in_person" }),
+});
+assert.equal(editedAppointment.status, 200);
+const editedAppointmentBody = await editedAppointment.json();
+assert.equal(editedAppointmentBody.appointment.durationMinutes, 60);
+assert.equal(editedAppointmentBody.appointment.mode, "in_person");
+assert.equal(editedAppointmentBody.appointment.amount, "190.00");
+
 const ownerAppointments = await fetch(api + "/appointments?month=" + testMonth, { headers: { cookie: ownerCookie } });
 assert.equal(ownerAppointments.status, 200);
 const ownerAppointmentRows = (await ownerAppointments.json()).appointments;

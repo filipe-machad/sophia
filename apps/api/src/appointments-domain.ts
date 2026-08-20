@@ -10,6 +10,15 @@ export const createAppointmentSchema = z.object({
   mode: z.enum(["online", "in_person"]),
 });
 
+export const updateAppointmentSchema = z.object({
+  clientId: z.string().uuid().optional(),
+  startsAt: z.coerce.date().optional(),
+  durationMinutes: z.coerce.number().int().min(15).max(240).optional(),
+  mode: z.enum(["online", "in_person"]).optional(),
+}).refine(value => Object.values(value).some(item => item !== undefined), {
+  message: "At least one field is required",
+});
+
 export const updateAppointmentStatusSchema = z.object({
   status: z.enum(appointmentStatuses),
   absenceJustified: z.boolean().optional(),

@@ -11,7 +11,8 @@
 - CORS restrito ao frontend configurado e verificação de origem em operações mutáveis.
 - Cabeçalhos de segurança via Helmet.
 - Redação de cookies e autorização nos logs.
-- Toda consulta de clientes inclui o proprietário autenticado.
+- Toda consulta e alteração de clientes, sessões e pagamentos inclui o proprietário autenticado.
+- O teste de isolamento entre contas cobre leitura e alteração dos registros administrativos.
 - PostgreSQL exposto apenas em `127.0.0.1` no ambiente local.
 - Mensagem de login deliberadamente genérica para não confirmar contas existentes.
 

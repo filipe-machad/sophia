@@ -26,8 +26,10 @@
 .sessionMain div>span,.mode{display:flex;align-items:center;gap:5px;margin-top:5px;color:#89948e;font-size:11px}
 .mode{flex:none;margin:0;padding:6px 8px;border-radius:8px;color:#597164;background:#edf3ef}
 .state{display:grid;justify-items:start}
-.state>button{height:33px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid #e2e7e3;border-radius:9px;color:#607068;background:#fff;cursor:pointer;font-size:12px;font-weight:700}
-.state>button:hover{border-color:#b9cbc1;color:#315d4e;background:#f4f8f5}
+.sessionActions{display:flex;align-items:center;gap:6px}
+.sessionActions button{height:33px;display:flex;align-items:center;gap:6px;padding:0 10px;border:1px solid #e2e7e3;border-radius:9px;color:#607068;background:#fff;cursor:pointer;font-size:12px;font-weight:700}
+.sessionActions button:last-child{width:33px;justify-content:center;padding:0}
+.sessionActions button:hover{border-color:#b9cbc1;color:#315d4e;background:#f4f8f5}
 .state small{margin-top:4px;color:#8b9690;font-size:10px}
 .payment{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .payment>span{display:grid}
