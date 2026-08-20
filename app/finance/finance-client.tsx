@@ -125,8 +125,7 @@ export default function FinanceClient({ demo, initialAppointments, initialError 
       });
       if (!response.ok) throw new Error();
       const body = await response.json() as { payment: { status: PaymentStatus; paidAt: string | null } };
-      setAppointments(current => current.map(item => item.id === appointment.id ? { ...item, ...body.payment } : item));
-      router.refresh();
+      setAppointments(current => current.map(item => item.id === appointment.id ? { ...item, paymentStatus: body.payment.status, paidAt: body.payment.paidAt } : item));
     } catch {
       setMessage("Não foi possível atualizar este pagamento.");
     } finally {

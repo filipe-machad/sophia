@@ -417,7 +417,7 @@ export default function AgendaClient({ demo, initialAppointments, initialClients
       });
       if (!response.ok) throw new Error();
       const body = await response.json() as { payment: { status: PaymentStatus; paidAt: string | null } };
-      setAppointments(current => current.map(item => item.id === appointment.id ? { ...item, ...body.payment } : item));
+      setAppointments(current => current.map(item => item.id === appointment.id ? { ...item, paymentStatus: body.payment.status, paidAt: body.payment.paidAt } : item));
     } catch {
       setMessage("Não foi possível alterar o pagamento.");
     }
